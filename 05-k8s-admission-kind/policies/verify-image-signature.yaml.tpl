@@ -50,7 +50,8 @@ spec:
         images.containers.map(image,
           verifyAttestationSignatures(image, attestations.vulns, [attestors.teamkey])).all(n, n > 0)
       message: "image has no signed vulnerability summary"
+    # extractPayload returns the whole in-toto statement; our summary is its predicate.
     - expression: >-
-        images.containers.map(image, extractPayload(image, attestations.vulns)).all(p,
-          int(p.counts.critical) == 0 && int(p.fixable.high) == 0)
+        images.containers.map(image, extractPayload(image, attestations.vulns)).all(s,
+          int(s.predicate.counts.critical) == 0 && int(s.predicate.fixable.high) == 0)
       message: "the signed vulnerability summary shows CRITICAL or fixable HIGH findings"
