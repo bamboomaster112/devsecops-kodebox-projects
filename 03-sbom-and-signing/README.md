@@ -25,15 +25,31 @@ cd ~/devsecops-kodebox-projects
 It needs project 01's hardened app and `~/devsecops`. It leaves the registry running and
 populated, which project 05 relies on.
 
-## Step 1: A private registry
+## Step 1: A private registry with its own CA
 
 ```bash
-./03-sbom-and-signing/registry.sh up       # registry:3 on 127.0.0.1:5000 only
+./03-sbom-and-signing/registry.sh up       # registry:3 over HTTPS on 127.0.0.1:5000 only
 ./03-sbom-and-signing/registry.sh status   # list repositories
+./03-sbom-and-signing/registry.sh reset    # wipe images, data and certificate, start fresh
 ```
 
-It binds to `127.0.0.1`, so it is not exposed through the KodeBox's public IP. Docker,
-Cosign and Syft all treat `localhost` registries as plain HTTP automatically.
+The first `up` creates a lab certificate authority and a server certificate in
+`~/.kbx/registry-tls`. The certificate covers both names the registry is reached by:
+`localhost` from the box and `kbx-registry` from inside the kind cluster in project 05.
+This is how most companies run a private registry, and it matters later: Kyverno fetches
+Cosign 3 signatures over HTTPS even when told the registry is insecure.
+
+Who trusts the lab CA, and how:
+
+| Client | How it trusts the registry |
+|---|---|
+| Docker (push) | `localhost` is treated as an insecure registry by default, so the daemon accepts the certificate |
+| Cosign, Syft, Grype | `common.sh` exports `SSL_CERT_FILE` pointing at the system CAs plus the lab CA |
+| curl | `--cacert ~/.kbx/registry-tls/ca.crt` |
+| kind node (project 05) | `ca.crt` copied into `/etc/containerd/certs.d/kbx-registry:5000/` |
+| Kyverno (project 05) | Helm value `admissionController.caCertificates.data` |
+
+It binds to `127.0.0.1`, so it is never exposed through the KodeBox's public IP.
 
 ## Step 2: Push, then pin the digest
 
@@ -46,16 +62,19 @@ docker push localhost:5000/kbx/sample-app:1.0.0
 `Docker-Content-Digest` header, which is what deploy tooling does:
 
 ```text
-localhost:5000/kbx/sample-app@sha256:5ebfc655baecd9574696cd5aac9660d2c53d5fb20eb967fe113c571921362a78
+localhost:5000/kbx/sample-app@sha256:dc787b62c46195ae1b650ca535947a866d22ee153a26ffabadc528356a202872
 ```
+
+Your digest will differ: the hardened Dockerfile runs `apt-get upgrade`, so every rebuild
+can produce new bytes. That is exactly why everything downstream refers to the digest.
 
 ## Step 3: SBOM, scan, sign, attest
 
 `sign-and-attest.sh <repo@sha256:digest>` does five things:
 
-1. **SBOM** with Syft, in CycloneDX and SPDX JSON. Syft also lists every file with its
-   hash, which is why the raw component count is in the thousands while the package
-   count is in the low hundreds.
+1. **SBOM** with Syft, in CycloneDX and SPDX JSON. For the hardened image that is 97
+   packages plus 2,668 file entries with hashes (Syft records every file, which is why a
+   raw "components" count looks huge).
 2. **Scan the SBOM** with `grype sbom:sbom.cdx.json`. Scanning the SBOM, not the image,
    is how you re-check old releases against today's CVE data without pulling them.
 3. **Vulnerability summary**: a small JSON predicate with counts and fixable counts by
@@ -83,7 +102,7 @@ or a KMS-held key. A key file on a box is fine for learning, not for a release p
 Cosign 3 stores signatures and attestations as **OCI referrers** next to the image:
 
 ```text
-📦 Supply Chain Security Related artifacts for an image: localhost:5000/kbx/sample-app@sha256:5ebf...
+📦 Supply Chain Security Related artifacts for an image: localhost:5000/kbx/sample-app@sha256:dc78...
 └── 🔗 https://github.com/bamboomaster112/devsecops-kodebox-projects/vuln-summary/v1 artifacts via OCI referrer
 └── 🔗 https://cyclonedx.org/bom artifacts via OCI referrer
 └── 🔗 https://sigstore.dev/cosign/sign/v1 artifacts via OCI referrer
@@ -95,9 +114,10 @@ Cosign 3 stores signatures and attestations as **OCI referrers** next to the ima
 
 ```text
 --> cosign verify (signature)
-    signed digest: sha256:5ebfc655...
+    signed digest: sha256:dc787b62...
     PASS
 --> cosign verify-attestation --type cyclonedx (SBOM)
+    SBOM lists 97 packages
     PASS
 --> cosign verify-attestation --policy policy/vuln-summary.rego
     critical=0 fixable-high=0

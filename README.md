@@ -74,7 +74,7 @@ Then open a project's README and follow it, or run its main script directly:
 - **Port 22 cannot be opened to everyone; 80 and 443 are open by default.** Project 04
   serves its report on port 80. Restrict that rule to your own IP if the report should
   stay private.
-- **Memory is 4 GB.** The kind cluster with Kyverno uses about 1 GB. Run
+- **Memory is 4 GB.** The kind node with Kyverno uses about 1.6 GB. Run
   `kind delete cluster --name kbx` when you finish project 05.
 
 ## Repository layout
