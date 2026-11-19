@@ -20,7 +20,7 @@ docker rm -f "$NAME" >/dev/null 2>&1 || true
 # Our rules file is mounted over the image's default ruleset, so this Falco loads
 # nothing else and only alerts on the lab's target container.
 docker run -d --name "$NAME" \
-  --privileged \
+  --privileged --pid=host \
   -v /var/run/docker.sock:/host/var/run/docker.sock:ro \
   -v /proc:/host/proc:ro \
   -v "$HERE/rules/kbx_rules.yaml:/etc/falco/falco_rules.yaml:ro" \
