@@ -204,6 +204,11 @@ def main() -> int:
 
     (args.report_dir / "gate-result.json").write_text(
         json.dumps({"verdict": verdict, "checks": checks, "policy": policy}, indent=2))
+    icon = {"PASS": "✅", "FAIL": "❌", "SKIP": "➖"}
+    md = [f"## {args.title}: **{verdict}**", "", "| Result | Tool | Check | Found | Limit |", "|---|---|---|---|---|"]
+    md += [f"| {icon[c['status']]} {c['status']} | {c['tool']} | {c['name']} | {c['value']} | {c['limit']} |"
+           for c in checks]
+    (args.report_dir / "gate-summary.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     if args.html:
         args.html.parent.mkdir(parents=True, exist_ok=True)
         args.html.write_text(render_html(args.title, summary, checks, verdict, policy), encoding="utf-8")
