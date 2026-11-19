@@ -32,7 +32,7 @@ fetch_tar gitleaks/gitleaks   "v$GITLEAKS_VERSION" "gitleaks_${GITLEAKS_VERSION}
 fetch_tar goodwithtech/dockle "v$DOCKLE_VERSION"   "dockle_${DOCKLE_VERSION}_Linux-64bit.tar.gz" "dockle_${DOCKLE_VERSION}_checksums.txt" dockle
 
 base="$(gh hadolint/hadolint "v$HADOLINT_VERSION")"
-curl -fsSLo hadolint "$base/hadolint-linux-x86_64"
-echo "$(curl -fsSL "$base/hadolint-linux-x86_64.sha256" | awk '{print $1}')  hadolint" | sha256sum -c --quiet
-sudo install -m 0755 hadolint "$BIN_DIR/hadolint"
+curl -fsSLO "$base/hadolint-linux-x86_64"
+curl -fsSL "$base/checksums.sha256" | grep -E "[[:space:]]\*?hadolint-linux-x86_64\$" | sha256sum -c --quiet
+sudo install -m 0755 hadolint-linux-x86_64 "$BIN_DIR/hadolint"
 echo "installed hadolint (v$HADOLINT_VERSION)"
