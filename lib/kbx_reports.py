@@ -154,15 +154,20 @@ def parse_checkov(path: Path) -> dict | None:
     blocks = load_stream(path)
     if blocks is None:
         return None
-    failed = []
+    failed, seen = [], set()
     passed = 0
     for block in blocks:
         results = block.get("results") or {}
         # --quiet drops the passed list from the results, but the summary keeps the count.
         passed += (block.get("summary") or {}).get("passed", len(results.get("passed_checks") or []))
         for c in results.get("failed_checks") or []:
+            key = (c.get("check_id"), c.get("file_path"), c.get("resource"), block.get("check_type"))
+            if key in seen:   # with several -d folders Checkov can report the same result twice
+                continue
+            seen.add(key)
             failed.append({"id": c.get("check_id"), "title": c.get("check_name"), "file": c.get("file_path"),
-                           "framework": block.get("check_type"), "severity": norm_sev(c.get("severity"))})
+                           "resource": c.get("resource"), "framework": block.get("check_type"),
+                           "severity": norm_sev(c.get("severity"))})
     return {"passed": passed, "failed": len(failed), "findings": failed}
 
 
