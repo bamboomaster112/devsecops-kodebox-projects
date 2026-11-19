@@ -92,3 +92,12 @@
     user=%user.name proc=%proc.name cmdline=%proc.cmdline)
   priority: NOTICE
   tags: [kbx, mitre_command_and_control, T1071]
+
+# Readiness probe used by simulate.sh: proves Falco is capturing AND already knows the
+# target container's name before the real test starts.
+- rule: KBX Canary
+  desc: A marker process simulate.sh runs in the target container to check Falco is ready.
+  condition: kbx_spawned_process and kbx_target and proc.cmdline contains "kbx-canary"
+  output: Canary seen (container=%container.name cmdline=%proc.cmdline)
+  priority: NOTICE
+  tags: [kbx, canary]

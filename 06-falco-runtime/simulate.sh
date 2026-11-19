@@ -22,7 +22,17 @@ docker run -d --name "$TARGET" -p 127.0.0.1:18000:8000 "$IMAGE" >/dev/null
 for _ in $(seq 1 20); do curl -fsS -o /dev/null http://127.0.0.1:18000/healthz && break; sleep 0.5; done
 echo "Target app is up: $(curl -fsS http://127.0.0.1:18000/)"
 since="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-sleep 1
+
+# Falco learns a new container's name a moment after it starts. Until then, rules that
+# match on container.name cannot fire, so wait until a harmless canary is seen.
+printf 'Waiting for Falco to see the target container'
+ready=false
+for _ in $(seq 1 30); do
+  docker exec "$TARGET" python -c "'kbx-canary'" >/dev/null 2>&1 || true
+  if docker logs kbx-falco --since "$since" 2>&1 | grep -q '"rule":"KBX Canary"'; then ready=true; break; fi
+  printf '.'; sleep 1
+done
+$ready && echo " ready" || { echo " Falco never saw the canary; check: docker logs kbx-falco" >&2; exit 1; }
 
 act() { printf '\033[1;36m--> %s\033[0m\n' "$1"; shift; "$@" >/dev/null 2>&1 || true; sleep 1; }
 act "1. Open a shell in the app container"            docker exec "$TARGET" sh -c 'id'
@@ -38,7 +48,7 @@ sleep 3
 alerts="$(docker logs kbx-falco --since "$since" 2>&1 | grep '^{' || true)"
 echo
 echo "Alerts raised by kbx-falco:"
-jq -r '"    \(.priority | ascii_upcase | .[0:8])  \(.rule)"' <<<"$alerts" | sort | uniq -c | sed 's/^ */  /'
+jq -r 'select(.rule != "KBX Canary") | "    \(.priority | ascii_upcase | .[0:8])  \(.rule)"' <<<"$alerts" | sort | uniq -c | sed 's/^ */  /'
 
 printf '\n\033[1m%-6s %s\033[0m\n' RESULT "EXPECTED RULE"
 fails=0
