@@ -39,7 +39,7 @@ def read_policy(path: Path) -> dict:
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 key, value = line.split("=", 1)
-                policy[key.strip()] = value.strip().strip('"')
+                policy[key.strip()] = value.split("#", 1)[0].strip().strip('"')  # drop inline comments
     for key in list(policy):  # environment variables override the file
         policy[key] = os.environ.get(key, policy[key])
     return policy
