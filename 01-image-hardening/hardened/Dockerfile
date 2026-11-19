@@ -5,10 +5,11 @@
 
 # (1) Supported Python on a current Debian base, pinned by tag AND digest so a rebuild
 #     cannot silently pick up a different image. Refresh the digest on purpose.
-ARG BASE_IMAGE=python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90
+#     Written out in both FROM lines (not via an ARG) so scanners such as Checkov and
+#     update bots such as Dependabot can read it.
 
 # ---------- build stage: install dependencies into a virtualenv ----------
-FROM ${BASE_IMAGE} AS build
+FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 AS build
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /build
@@ -21,7 +22,7 @@ RUN python -m venv /opt/venv \
  && /opt/venv/bin/pip uninstall -y pip
 
 # ---------- runtime stage: no compilers, no package caches, no pip ----------
-FROM ${BASE_IMAGE} AS runtime
+FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 AS runtime
 # (4) Apply Debian security fixes published after the base image was built, and remove
 #     pip: the app never installs anything at runtime, and pip's vendored libraries
 #     (urllib3, msgpack, ...) are the image's only fixable Python CVEs.
