@@ -15,8 +15,15 @@ ensure_keys() {
     step "Generating a cosign key pair in $KEY_DIR"
     (umask 077; python3 -c 'import secrets; print(secrets.token_urlsafe(24))' > "$KEY_DIR/password")
     COSIGN_PASSWORD="$(cat "$KEY_DIR/password")" \
-      cosign generate-key-pair --output-key-prefix "$KEY_DIR/cosign" >/dev/null
+      cosign generate-key-pair --output-key-prefix "$KEY_DIR/cosign" >/dev/null 2>&1
   fi
+  # Cosign 3 signs through a "signing config" that lists the Sigstore services to use.
+  # An empty one means: key-based signing, nothing sent to the public transparency log
+  # or timestamp authority. Verifiers then need --insecure-ignore-tlog=true.
+  if [[ ! -f "$KEY_DIR/signing-config.json" ]]; then
+    cosign signing-config create --out "$KEY_DIR/signing-config.json" >/dev/null
+  fi
+  SIGNING_CONFIG="$KEY_DIR/signing-config.json"
   export COSIGN_PASSWORD
   COSIGN_PASSWORD="$(cat "$KEY_DIR/password")"
   COSIGN_KEY="$KEY_DIR/cosign.key"

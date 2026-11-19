@@ -47,6 +47,7 @@ git config user.email "lab@kodebox.invalid"
 stage "1: Detect - scan the files and the full git history"
 n_hist="$(leaks git 1-history)"
 n_dir="$(leaks dir 1-files)"
+say "History scan: $n_hist finding(s). Working-tree scan: $n_dir finding(s)."
 jq -r '.[] | "    \(.RuleID)  \(.File):\(.StartLine)  commit \(.Commit[0:8])  secret \(.Secret)"' "$R/1-history.json"
 check "leak found in git history" yes "$(gt0 "$n_hist")"
 check "leak found in working tree" yes "$(gt0 "$n_dir")"
@@ -82,10 +83,10 @@ pause
 stage "4: Purge - rewrite history so the token is gone from every commit"
 old_head="$(git rev-parse --short HEAD)"
 echo 'regex:ghp_[0-9A-Za-z]{36}==>REDACTED_GITHUB_TOKEN' > "$R/replacements.txt"
-git filter-repo --force --quiet --replace-text "$R/replacements.txt"
+git filter-repo --force --quiet --replace-text "$R/replacements.txt" 2>&1 | sed 's/^/    /'
 new_head="$(git rev-parse --short HEAD)"
 say "HEAD was $old_head, now $new_head: every commit after the leak has a new hash."
-git log --all -p --format='    %h %s' -- config.env | grep -E '^    [0-9a-f]{7}|GITHUB_TOKEN' | sed 's/^+/    +/'
+git log --all -p --format='    %h %s' -- config.env | grep -E '^    [0-9a-f]{7}|GITHUB_TOKEN' | sed -E 's/^([+-])/    \1/'
 check "history clean after filter-repo" 0 "$(leaks git 4-history)"
 cat <<'EOF'
     On a real remote you would now: force-push every branch and tag, ask everyone to

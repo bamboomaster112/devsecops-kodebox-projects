@@ -35,17 +35,17 @@ jq '{
 echo "    counts:  $(jq -c .counts "$out/vuln-summary.json")"
 echo "    fixable: $(jq -c .fixable "$out/vuln-summary.json")"
 
-# --tlog-upload=false keeps this lab private: nothing is written to the public
-# Rekor transparency log. Verification then needs --insecure-ignore-tlog.
+# The empty signing config from common.sh keeps this lab private: nothing is written
+# to the public Rekor transparency log. Verification then needs --insecure-ignore-tlog.
 step "cosign sign"
-cosign sign --yes --key "$COSIGN_KEY" --tlog-upload=false "$ref" 2>&1 | sed 's/^/    /'
+cosign sign --yes --key "$COSIGN_KEY" --signing-config "$SIGNING_CONFIG" "$ref" 2>&1 | sed 's/^/    /'
 
 step "cosign attest: SBOM (CycloneDX)"
-cosign attest --yes --key "$COSIGN_KEY" --tlog-upload=false \
+cosign attest --yes --key "$COSIGN_KEY" --signing-config "$SIGNING_CONFIG" \
   --type cyclonedx --predicate "$out/sbom.cdx.json" "$ref" 2>&1 | sed 's/^/    /'
 
 step "cosign attest: vulnerability summary"
-cosign attest --yes --key "$COSIGN_KEY" --tlog-upload=false \
+cosign attest --yes --key "$COSIGN_KEY" --signing-config "$SIGNING_CONFIG" \
   --type "$VULN_PREDICATE_TYPE" --predicate "$out/vuln-summary.json" "$ref" 2>&1 | sed 's/^/    /'
 
 echo "Signed and attested: $ref"
