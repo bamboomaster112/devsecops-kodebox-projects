@@ -19,7 +19,7 @@ fi
 
 docker rm -f "$TARGET" >/dev/null 2>&1 || true
 docker run -d --name "$TARGET" -p 127.0.0.1:18000:8000 "$IMAGE" >/dev/null
-for _ in $(seq 1 20); do curl -fsS -o /dev/null http://127.0.0.1:18000/healthz && break; sleep 0.5; done
+for _ in $(seq 1 20); do curl -fsS -o /dev/null http://127.0.0.1:18000/healthz 2>/dev/null && break; sleep 0.5; done
 echo "Target app is up: $(curl -fsS http://127.0.0.1:18000/)"
 since="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
