@@ -1,0 +1,27 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/title: Restrict image registries
+    policies.kyverno.io/description: >-
+      Pods in kbx-apps may only run images from the internal registry, where every
+      image has passed the security gate and been signed.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: internal-registry-only
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["kbx-apps"]
+      validate:
+        message: "Image {{ request.object.spec.containers[0].image }} is not from the approved registry kbx-registry:5000."
+        pattern:
+          spec:
+            =(initContainers):
+              - image: "kbx-registry:5000/*"
+            containers:
+              - image: "kbx-registry:5000/*"

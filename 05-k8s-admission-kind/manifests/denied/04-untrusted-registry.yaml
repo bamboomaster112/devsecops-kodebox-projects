@@ -1,4 +1,5 @@
-# Expect: DENIED by Kyverno restrict-image-registries (Docker Hub is not an approved registry).
+# Image pulled straight from Docker Hub instead of the internal registry.
+# expect-denied-by: Kyverno restrict-image-registries
 apiVersion: v1
 kind: Pod
 metadata:

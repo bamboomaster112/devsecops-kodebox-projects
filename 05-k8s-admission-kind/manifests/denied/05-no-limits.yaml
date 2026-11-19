@@ -1,4 +1,5 @@
-# Expect: DENIED by Kyverno require-resource-limits.
+# Signed image from the right registry, but no CPU or memory limits.
+# expect-denied-by: Kyverno require-resource-limits
 apiVersion: v1
 kind: Pod
 metadata:

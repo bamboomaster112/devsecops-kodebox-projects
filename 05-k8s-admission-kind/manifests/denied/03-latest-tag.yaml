@@ -1,4 +1,5 @@
-# Expect: DENIED by Kyverno disallow-latest-tag.
+# Signed image, but referenced by the moving ":latest" tag.
+# expect-denied-by: Kyverno disallow-latest-tag
 apiVersion: v1
 kind: Pod
 metadata:

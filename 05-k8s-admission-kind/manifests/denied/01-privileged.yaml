@@ -1,4 +1,5 @@
-# Expect: DENIED by Pod Security Admission (restricted) - privileged container.
+# A privileged container: full access to the node. Pod Security "restricted" blocks it.
+# expect-denied-by: Pod Security Admission
 apiVersion: v1
 kind: Pod
 metadata:

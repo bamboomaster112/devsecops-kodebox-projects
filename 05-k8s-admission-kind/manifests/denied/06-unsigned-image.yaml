@@ -1,4 +1,5 @@
-# Expect: DENIED by Kyverno verify-image-signature (pushed to the approved registry, never signed).
+# Pushed to the approved registry but never signed.
+# expect-denied-by: Kyverno verify-image-signature
 apiVersion: v1
 kind: Pod
 metadata:

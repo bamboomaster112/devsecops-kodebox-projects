@@ -26,13 +26,18 @@ docker image inspect "$image" > "$out/inspect.json"
 
 step "trivy image $image (vulnerabilities + secrets)"
 trivy image --quiet --scanners vuln,secret --format json --output "$out/trivy.json" "$image"
-trivy convert --format table --output "$out/trivy.txt" "$out/trivy.json"
+trivy convert --quiet --format table --output "$out/trivy.txt" "$out/trivy.json"
 
 step "grype $image"
 grype --quiet -o json "docker:$image" > "$out/grype.json"
 
 step "dockle $image"
-dockle --format json --output "$out/dockle.json" "$image" > /dev/null || true
+# Accepted checks live in <build-context>/.dockleignore, one code per line with a reason.
+ignores=()
+if [[ -f "$ctx/.dockleignore" ]]; then
+  while read -r code; do ignores+=(--ignore "$code"); done < <(grep -oE '^[A-Z]+-[A-Z]+-[0-9]+' "$ctx/.dockleignore")
+fi
+dockle "${ignores[@]}" --format json --output "$out/dockle.json" "$image" > /dev/null || true
 
 step "syft $image (SBOM, CycloneDX)"
 syft --quiet "docker:$image" -o "cyclonedx-json=$out/sbom.cdx.json"

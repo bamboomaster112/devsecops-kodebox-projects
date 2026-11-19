@@ -9,9 +9,3 @@ nodes:
       - containerPort: 30080
         hostPort: 30080
         listenAddress: "127.0.0.1"
-containerdConfigPatches:
-  # Read per-registry settings from /etc/containerd/certs.d (cluster-up.sh writes one
-  # for the local registry so the node pulls kbx-registry:5000 over plain HTTP).
-  - |-
-    [plugins."io.containerd.grpc.v1.cri".registry]
-      config_path = "/etc/containerd/certs.d"

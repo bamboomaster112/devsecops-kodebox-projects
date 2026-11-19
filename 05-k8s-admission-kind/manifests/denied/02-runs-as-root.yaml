@@ -1,4 +1,5 @@
-# Expect: DENIED by Pod Security Admission (restricted) - runs as root.
+# Runs as UID 0. Pod Security "restricted" requires a non-root user.
+# expect-denied-by: Pod Security Admission
 apiVersion: v1
 kind: Pod
 metadata:

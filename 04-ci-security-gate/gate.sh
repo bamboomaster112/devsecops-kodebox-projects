@@ -66,7 +66,11 @@ step "grype $IMAGE"
 grype --quiet -o json "docker:$IMAGE" > "$R/grype.json"
 
 step "dockle $IMAGE"
-dockle --format json --output "$R/dockle.json" "$IMAGE" >/dev/null || true
+ignores=()   # reviewed exceptions, one code per line in <app>/.dockleignore
+if [[ -f "$APP_DIR/.dockleignore" ]]; then
+  while read -r code; do ignores+=(--ignore "$code"); done < <(grep -oE '^[A-Z]+-[A-Z]+-[0-9]+' "$APP_DIR/.dockleignore")
+fi
+dockle "${ignores[@]}" --format json --output "$R/dockle.json" "$IMAGE" >/dev/null || true
 
 step "syft $IMAGE (SBOM)"
 syft --quiet "docker:$IMAGE" -o "cyclonedx-json=$R/sbom.cdx.json"

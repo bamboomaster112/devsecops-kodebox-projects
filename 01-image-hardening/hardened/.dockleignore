@@ -1,0 +1,7 @@
+# Dockle checks accepted for this image, one code per line, each with a reason.
+# scan-image.sh and gate.sh pass these to dockle with --ignore.
+#
+# DKL-DI-0005 "Clear apt-get caches": raised on the python:3.13-slim BASE layer, which
+# cleans up with `apt-get dist-clean`, a command Dockle does not recognise. Our own
+# RUN removes /var/lib/apt/lists. False positive, reviewed 2026-11-19.
+DKL-DI-0005

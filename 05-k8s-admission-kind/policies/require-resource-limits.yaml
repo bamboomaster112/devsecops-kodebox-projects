@@ -1,0 +1,28 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+  annotations:
+    policies.kyverno.io/title: Require CPU and memory limits
+    policies.kyverno.io/description: >-
+      A container without limits can starve its neighbours, which turns one bug or
+      one attacker into an outage for everything on the node.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: cpu-and-memory-limits
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["kbx-apps"]
+      validate:
+        message: "Every container needs resources.limits.cpu and resources.limits.memory."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"

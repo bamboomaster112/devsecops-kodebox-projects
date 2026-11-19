@@ -22,12 +22,19 @@ RUN python -m venv /opt/venv \
 
 # ---------- runtime stage: no compilers, no package caches, no pip ----------
 FROM ${BASE_IMAGE} AS runtime
-# (4) A dedicated, unprivileged user with a fixed UID that Kubernetes can check.
-RUN groupadd --system --gid 10001 app \
+# (4) Apply Debian security fixes published after the base image was built, and remove
+#     pip: the app never installs anything at runtime, and pip's vendored libraries
+#     (urllib3, msgpack, ...) are the image's only fixable Python CVEs.
+# (5) A dedicated, unprivileged user with a fixed UID that Kubernetes can check.
+RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/* \
+ && python -m pip uninstall -y pip \
+ && groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 COPY --from=build /opt/venv /opt/venv
 WORKDIR /app
-# (5) COPY one named file instead of "ADD . /app" (no config.env, no .git).
+# (6) COPY one named file instead of "ADD . /app" (no config.env, no .git).
 COPY --chown=root:root --chmod=0444 app.py .
 ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -37,5 +44,5 @@ USER 10001:10001
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
-# (6) Exec-form CMD and a production WSGI server instead of the Flask dev server.
+# (7) Exec-form CMD and a production WSGI server instead of the Flask dev server.
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--access-logfile", "-", "app:app"]

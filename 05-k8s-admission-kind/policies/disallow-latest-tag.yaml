@@ -1,0 +1,25 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow the latest tag
+    policies.kyverno.io/description: >-
+      ":latest" points at different bytes over time, so a rollback or a new node can
+      quietly run code nobody reviewed. Require an explicit version.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: require-explicit-tag
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["kbx-apps"]
+      validate:
+        message: "Use an explicit version tag or digest, not ':latest'."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"
