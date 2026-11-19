@@ -7,7 +7,7 @@ source "$ROOT/03-sbom-and-signing/common.sh"
 PUB="$KEY_DIR/cosign.pub"
 [[ -f "$PUB" ]] || { echo "No $PUB: run 03-sbom-and-signing/pipeline.sh first" >&2; exit 1; }
 
-kubectl apply -f "$HERE/policies/"*.yaml
+kubectl apply -f "$HERE/policies/"   # picks up *.yaml only; the .tpl is rendered below
 # Indent the PEM to sit under 'publicKeys: |-' in the template.
 python3 - "$HERE/policies/verify-image-signature.yaml.tpl" "$PUB" <<'PY' | kubectl apply -f -
 import re, sys
