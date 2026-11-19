@@ -23,7 +23,7 @@ step "cosign verify-attestation --type cyclonedx (SBOM)"
 if sbom="$(cosign verify-attestation --key "$COSIGN_PUB" --insecure-ignore-tlog=true \
             --type cyclonedx "$ref" 2>/dev/null)"; then
   echo "$sbom" | head -1 | jq -r '.payload' | base64 -d \
-    | jq -r '"    SBOM lists \(.predicate.components | length) components"'
+    | jq -r '"    SBOM lists \([.predicate.components[] | select(.type != "file")] | length) packages"'
   echo "    PASS"
 else
   echo "    FAIL: no signed SBOM attestation"; rc=1

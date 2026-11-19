@@ -1,0 +1,83 @@
+# Project 04 in CI: the same gate.sh that runs on the KodeBox, on every push and PR.
+# Findings go to the Security tab (code scanning), the HTML report is kept as an
+# artifact, and the job fails when the gate fails.
+name: devsecops-gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write   # upload SARIF to code scanning
+    steps:
+      - uses: actions/checkout@__CHECKOUT__
+        with:
+          fetch-depth: 0          # gitleaks scans the full history
+          persist-credentials: false
+
+      - uses: actions/setup-python@__SETUP_PYTHON__
+        with:
+          python-version: "3.12"
+
+      - name: Install scanners (same versions as the KodeBox)
+        run: |
+          ./setup/install-scanners.sh
+          python -m pip install --quiet $(grep -E '^(semgrep|checkov|bandit)==' setup/requirements-tools.txt)
+
+      - name: Refresh vulnerability databases
+        run: ./setup/update-vuln-dbs.sh
+
+      - name: Security gate
+        id: gate
+        run: ./04-ci-security-gate/gate.sh
+
+      - name: Job summary
+        if: always()
+        run: cat 04-ci-security-gate/out/reports/gate-summary.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload HTML report and raw results
+        if: always()
+        uses: actions/upload-artifact@__UPLOAD_ARTIFACT__
+        with:
+          name: security-gate-report
+          path: 04-ci-security-gate/out/
+          retention-days: 14
+
+      - name: SARIF - Trivy
+        if: always()
+        uses: github/codeql-action/upload-sarif@__UPLOAD_SARIF__
+        with:
+          sarif_file: 04-ci-security-gate/out/reports/trivy.sarif
+          category: trivy-image
+      - name: SARIF - Semgrep
+        if: always()
+        uses: github/codeql-action/upload-sarif@__UPLOAD_SARIF__
+        with:
+          sarif_file: 04-ci-security-gate/out/reports/semgrep.sarif
+          category: semgrep
+      - name: SARIF - Gitleaks
+        if: always()
+        uses: github/codeql-action/upload-sarif@__UPLOAD_SARIF__
+        with:
+          sarif_file: 04-ci-security-gate/out/reports/gitleaks.sarif
+          category: gitleaks
+      - name: SARIF - Hadolint
+        if: always()
+        uses: github/codeql-action/upload-sarif@__UPLOAD_SARIF__
+        with:
+          sarif_file: 04-ci-security-gate/out/reports/hadolint.sarif
+          category: hadolint

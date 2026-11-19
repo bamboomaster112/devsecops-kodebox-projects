@@ -51,7 +51,7 @@ check "original digest still verifies" verified "$(verdict "$REF" /dev/null)"
 step "Restoring :1.0.0 to the signed digest"
 docker pull -q "$REF" >/dev/null
 docker tag "$REF" "$APP:1.0.0" && docker push -q "$APP:1.0.0" >/dev/null
-check "restored tag points at the signed digest" "$REF" "$(digest_ref "$APP:1.0.0")"
+check "restored tag points at the signed digest" yes "$([[ "$(digest_ref "$APP:1.0.0")" == "$REF" ]] && echo yes || echo no)"
 
 banner "6. Signed is not the same as safe: the legacy image from ~/devsecops"
 SAMPLE_APP_DIR="${SAMPLE_APP_DIR:-$HOME/devsecops}"
@@ -76,5 +76,5 @@ for r in "${RESULTS[@]}"; do
   printf '%-6s %-55s %s\n' "$s" "$label" "$detail"
   [[ "$s" == PASS ]] || fails=$((fails + 1))
 done
-echo "Public key for verifiers (projects 05): $COSIGN_PUB"
+echo "Public key for verifiers (project 05): $KEY_DIR/cosign.pub"
 exit "$fails"

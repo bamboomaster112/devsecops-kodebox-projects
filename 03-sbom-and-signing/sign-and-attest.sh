@@ -18,7 +18,8 @@ ensure_keys
 
 step "SBOM (syft): CycloneDX and SPDX"
 syft --quiet "registry:$ref" -o "cyclonedx-json=$out/sbom.cdx.json" -o "spdx-json=$out/sbom.spdx.json"
-echo "    $(jq '.components | length' "$out/sbom.cdx.json") components recorded"
+echo "    $(jq '[.components[] | select(.type != "file")] | length' "$out/sbom.cdx.json") packages recorded" \
+     "(+ $(jq '[.components[] | select(.type == "file")] | length' "$out/sbom.cdx.json") file entries with hashes)"
 
 step "Vulnerability scan of the SBOM (grype sbom:)"
 grype --quiet "sbom:$out/sbom.cdx.json" -o json > "$out/grype.json"
