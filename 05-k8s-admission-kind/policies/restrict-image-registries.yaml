@@ -1,27 +1,28 @@
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+# Pods in kbx-apps may only run images from the internal registry, where every image
+# has passed the security gate (project 04) and been signed (project 03).
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
 metadata:
   name: restrict-image-registries
-  annotations:
-    policies.kyverno.io/title: Restrict image registries
-    policies.kyverno.io/description: >-
-      Pods in kbx-apps may only run images from the internal registry, where every
-      image has passed the security gate and been signed.
 spec:
-  validationFailureAction: Enforce
-  background: false
-  rules:
-    - name: internal-registry-only
-      match:
-        any:
-          - resources:
-              kinds: ["Pod"]
-              namespaces: ["kbx-apps"]
-      validate:
-        message: "Image {{ request.object.spec.containers[0].image }} is not from the approved registry kbx-registry:5000."
-        pattern:
-          spec:
-            =(initContainers):
-              - image: "kbx-registry:5000/*"
-            containers:
-              - image: "kbx-registry:5000/*"
+  validationActions: [Deny]
+  evaluation:
+    background:
+      enabled: false
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: kbx-apps
+  validations:
+    - expression: >-
+        object.spec.containers.all(c, c.image.startsWith('kbx-registry:5000/')) &&
+        (!has(object.spec.initContainers) ||
+         object.spec.initContainers.all(c, c.image.startsWith('kbx-registry:5000/')))
+      messageExpression: >-
+        'images must come from kbx-registry:5000, found: ' +
+        object.spec.containers.map(c, c.image).join(', ')

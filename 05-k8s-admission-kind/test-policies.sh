@@ -15,12 +15,16 @@ for f in "$HERE"/manifests/denied/*.yaml; do
     if grep -q 'violates PodSecurity' <<<"$out"; then
       by="Pod Security Admission"
     else
-      pol="$(grep -oE 'restrict-image-registries|disallow-latest-tag|require-resource-limits|verify-image-signature' <<<"$out" | head -1)"
-      by="Kyverno ${pol:-?}"
+      # A request can trip several policies; list every one Kyverno names.
+      pols="$(grep -oE 'restrict-image-registries|disallow-latest-tag|require-resource-limits|verify-image-signature' <<<"$out" | sort -u | paste -sd, -)"
+      by="Kyverno ${pols:-?}"
     fi
   fi
   status=PASS
-  [[ "$verdict" == denied && "$expected_by" == "$by"* ]] || status=FAIL
+  exp_tool="${expected_by%% *}" exp_pol="${expected_by#Kyverno }"
+  if [[ "$verdict" != denied ]]; then status=FAIL
+  elif [[ "$exp_tool" == Kyverno ]]; then [[ "$by" == Kyverno*"$exp_pol"* ]] || status=FAIL
+  else [[ "$by" == "$expected_by" ]] || status=FAIL; fi
   [[ $status == FAIL ]] && fails=$((fails + 1))
   printf '%-6s %-30s %-8s %s\n' "$status" "$(basename "$f")" "$verdict" "$by"
   if [[ $status == FAIL || "${VERBOSE:-}" == 1 ]]; then

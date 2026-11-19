@@ -17,4 +17,4 @@ def fill(m):
     return "\n".join(indent + line for line in pub)
 print(re.sub(r"^( *)__COSIGN_PUBLIC_KEY__$", fill, tpl, flags=re.M))
 PY
-kubectl get clusterpolicy
+kubectl get validatingpolicies,imagevalidatingpolicies
