@@ -21,11 +21,15 @@ step "Connecting $REGISTRY_NAME to the kind network"
 docker network connect kind "$REGISTRY_NAME" 2>/dev/null || echo "    already connected"
 
 # Inside the cluster the registry is kbx-registry:5000 (its container name on the kind
-# network). Tell containerd on every node to pull from it over plain HTTP.
-step "Configuring containerd on the node(s) for kbx-registry:5000"
+# network). Give containerd on every node the lab CA so it can pull over HTTPS.
+step "Trusting the lab registry CA on the node(s)"
 for node in $(kind get nodes --name "$CLUSTER"); do
   docker exec "$node" mkdir -p /etc/containerd/certs.d/kbx-registry:5000
-  printf 'server = "http://kbx-registry:5000"\n\n[host."http://kbx-registry:5000"]\n  capabilities = ["pull", "resolve"]\n' \
+  docker cp "$REGISTRY_CA" "$node:/etc/containerd/certs.d/kbx-registry:5000/ca.crt"
+  printf '%s\n' 'server = "https://kbx-registry:5000"' '' \
+    '[host."https://kbx-registry:5000"]' \
+    '  capabilities = ["pull", "resolve"]' \
+    '  ca = "/etc/containerd/certs.d/kbx-registry:5000/ca.crt"' \
     | docker exec -i "$node" cp /dev/stdin /etc/containerd/certs.d/kbx-registry:5000/hosts.toml
 done
 

@@ -25,8 +25,6 @@ spec:
         kubernetes.io/metadata.name: kbx-apps
   matchImageReferences:
     - glob: "kbx-registry:5000/*"
-  credentials:
-    allowInsecureRegistry: true      # the lab registry speaks plain HTTP inside the kind network
   validationConfigurations:
     required: true
     mutateDigest: true
