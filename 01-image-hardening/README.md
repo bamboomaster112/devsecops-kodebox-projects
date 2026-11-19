@@ -145,9 +145,10 @@ code in that file to `dockle --ignore`. A reviewer can see what was accepted, wh
 
 ## Try it yourself
 
-1. Change `--workers 2` to a shell-form `CMD gunicorn ...` and rerun
+1. Change the last line of `hardened/Dockerfile` to shell form,
+   `CMD gunicorn --bind 0.0.0.0:8000 app:app`, then run
    `./01-image-hardening/scan-image.sh 01-image-hardening/hardened test:shellform /tmp/r`.
-   Which tool complains?
+   Which tool complains, and why does shell form matter for `docker stop`?
 2. Remove `!app.py` from `.dockerignore`. What breaks, and at which step?
 3. Swap the base to `python:3.13-alpine` and compare the fixable counts and the size.
    What do you lose? (Hint: musl and wheel availability.)

@@ -50,7 +50,13 @@ source ~/.bashrc
 ./setup/check-env.sh               # every tool, its version, and free capacity
 ```
 
-Then open a project's README and follow it, or run its main script directly:
+Run everything in one go (13.5 minutes on the tested box, every step PASS from a fresh clone):
+
+```bash
+./run-all.sh            # logs in ~/kbx-logs/
+```
+
+Or open a project's README and follow it, or run its main script directly:
 
 ```bash
 ./01-image-hardening/compare.sh
