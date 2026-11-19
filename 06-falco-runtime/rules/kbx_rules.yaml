@@ -8,8 +8,9 @@
   condition: (container.id != host and container.name startswith "kbx-target")
 
 # Falco 0.45 only sees exit events, so no "evt.dir = <" is needed (it is deprecated).
+# evt.rawres is the numeric return value (evt.res is a name such as SUCCESS).
 - macro: kbx_spawned_process
-  condition: (evt.type in (execve, execveat) and evt.res = 0)
+  condition: (evt.type in (execve, execveat) and evt.rawres = 0)
 
 - macro: kbx_open_read
   condition: (evt.type in (open, openat, openat2) and evt.is_open_read = true and fd.typechar = 'f' and fd.num >= 0)
@@ -84,7 +85,7 @@
   desc: >
     The app only answers requests. It should never open connections to the internet.
   condition: >
-    evt.type = connect and evt.res = 0 and kbx_target
+    evt.type = connect and (evt.rawres >= 0 or evt.res = EINPROGRESS) and kbx_target
     and fd.typechar = 4 and fd.sip != "127.0.0.1"
   output: >
     Outbound connection from app container (container=%container.name connection=%fd.name
