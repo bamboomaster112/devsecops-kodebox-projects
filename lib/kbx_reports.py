@@ -135,16 +135,31 @@ def parse_bandit(path: Path) -> dict | None:
     return {"severity": dict(Counter(f["severity"] for f in findings)), "findings": findings}
 
 
-def parse_checkov(path: Path) -> dict | None:
-    data = load(path)
-    if data is None:
+def load_stream(path: Path) -> list | None:
+    """Checkov prints one JSON document per scanned directory, back to back."""
+    if not path.is_file() or path.stat().st_size == 0:
         return None
-    blocks = data if isinstance(data, list) else [data]
+    text, docs, pos, dec = path.read_text(encoding="utf-8"), [], 0, json.JSONDecoder()
+    while pos < len(text):
+        while pos < len(text) and text[pos].isspace():
+            pos += 1
+        if pos >= len(text):
+            break
+        doc, pos = dec.raw_decode(text, pos)
+        docs.extend(doc if isinstance(doc, list) else [doc])
+    return docs
+
+
+def parse_checkov(path: Path) -> dict | None:
+    blocks = load_stream(path)
+    if blocks is None:
+        return None
     failed = []
     passed = 0
     for block in blocks:
         results = block.get("results") or {}
-        passed += len(results.get("passed_checks") or [])
+        # --quiet drops the passed list from the results, but the summary keeps the count.
+        passed += (block.get("summary") or {}).get("passed", len(results.get("passed_checks") or []))
         for c in results.get("failed_checks") or []:
             failed.append({"id": c.get("check_id"), "title": c.get("check_name"), "file": c.get("file_path"),
                            "framework": block.get("check_type"), "severity": norm_sev(c.get("severity"))})
