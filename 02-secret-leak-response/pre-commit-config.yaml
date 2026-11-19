@@ -1,0 +1,16 @@
+# Copied into the lab repo as .pre-commit-config.yaml by run-lab.sh (stage 5).
+# Uses the gitleaks and hadolint binaries already on the KodeBox (language: system),
+# so nothing is downloaded when the hook runs.
+repos:
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (staged changes)
+        entry: gitleaks git --pre-commit --staged --redact --no-banner --verbose --config .gitleaks.toml
+        language: system
+        pass_filenames: false
+      - id: hadolint
+        name: hadolint
+        entry: hadolint --failure-threshold warning
+        language: system
+        files: (^|/)Dockerfile$

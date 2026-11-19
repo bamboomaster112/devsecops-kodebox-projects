@@ -1,0 +1,19 @@
+# Gitleaks configuration for the KodeBox projects.
+# Keeps every built-in rule and adds one for an organisation-specific token format,
+# which is how teams catch their own internal keys that no public rule knows about.
+title = "KodeBox DevSecOps gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "kodebox-internal-api-key"
+description = "KodeBox internal API key (kbx_ followed by 32 hex characters)"
+regex = '''\bkbx_[0-9a-f]{32}\b'''
+keywords = ["kbx_"]
+tags = ["internal", "api-key"]
+
+# Paths that hold deliberately fake secrets for tests can be excluded here.
+[[allowlists]]
+description = "Test fixtures"
+paths = ['''(^|/)testdata/''']

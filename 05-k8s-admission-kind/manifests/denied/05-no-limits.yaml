@@ -1,0 +1,20 @@
+# Expect: DENIED by Kyverno require-resource-limits.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-limits
+  namespace: kbx-apps
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: app
+      image: kbx-registry:5000/kbx/sample-app:1.0.0
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]

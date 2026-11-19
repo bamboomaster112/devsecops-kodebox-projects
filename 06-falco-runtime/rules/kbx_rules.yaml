@@ -1,0 +1,92 @@
+# Custom Falco rules for the KodeBox runtime-detection project.
+#
+# Our own Falco container loads ONLY this file, so it defines its own macros and does
+# not depend on the default ruleset. Every rule is scoped to containers whose name
+# starts with "kbx-target", so the lab never alerts on anything else on the box.
+
+- macro: kbx_target
+  condition: (container.id != host and container.name startswith "kbx-target")
+
+- macro: kbx_spawned_process
+  condition: (evt.type in (execve, execveat) and evt.dir = <)
+
+- macro: kbx_open_read
+  condition: (evt.type in (open, openat, openat2) and evt.is_open_read = true and fd.typechar = 'f' and fd.num >= 0)
+
+- macro: kbx_open_write
+  condition: (evt.type in (open, openat, openat2) and evt.is_open_write = true and fd.typechar = 'f' and fd.num >= 0)
+
+- list: kbx_shells
+  items: [sh, bash, dash, ash, zsh]
+
+- list: kbx_package_managers
+  items: [apt, apt-get, dpkg, pip, pip3, apk, yum, dnf]
+
+- list: kbx_sensitive_files
+  items: [/etc/shadow, /etc/gshadow, /etc/sudoers]
+
+- list: kbx_binary_dirs
+  items: [/bin, /sbin, /usr/bin, /usr/sbin, /usr/local/bin, /usr/local/sbin]
+
+- rule: KBX Shell Spawned In App Container
+  desc: >
+    The app container runs gunicorn and nothing else. A shell inside it means someone
+    exec'd in or an exploit got command execution.
+  condition: kbx_spawned_process and kbx_target and proc.name in (kbx_shells)
+  output: >
+    Shell spawned in app container (container=%container.name image=%container.image.repository
+    user=%user.name uid=%user.uid shell=%proc.name cmdline=%proc.cmdline parent=%proc.pname)
+  priority: WARNING
+  tags: [kbx, mitre_execution, T1059]
+
+- rule: KBX Sensitive File Read In App Container
+  desc: A process in the app container opened a credential file.
+  condition: kbx_open_read and kbx_target and fd.name in (kbx_sensitive_files)
+  output: >
+    Sensitive file read in app container (container=%container.name file=%fd.name
+    user=%user.name uid=%user.uid proc=%proc.name cmdline=%proc.cmdline)
+  priority: ERROR
+  tags: [kbx, mitre_credential_access, T1003]
+
+- rule: KBX Package Manager In App Container
+  desc: >
+    Installing software at runtime is configuration drift. Images should be rebuilt,
+    never patched in place.
+  condition: kbx_spawned_process and kbx_target and proc.name in (kbx_package_managers)
+  output: >
+    Package manager run in app container (container=%container.name user=%user.name
+    proc=%proc.name cmdline=%proc.cmdline)
+  priority: WARNING
+  tags: [kbx, drift, T1072]
+
+- rule: KBX Write Below Binary Dir In App Container
+  desc: Something wrote into a system binary folder inside the running container.
+  condition: kbx_open_write and kbx_target and fd.directory in (kbx_binary_dirs)
+  output: >
+    Write below binary dir in app container (container=%container.name file=%fd.name
+    user=%user.name proc=%proc.name cmdline=%proc.cmdline)
+  priority: ERROR
+  tags: [kbx, mitre_persistence, T1543]
+
+- rule: KBX Executable Not In Image
+  desc: >
+    A program ran whose file was written after the container started (it lives in the
+    overlay upper layer). Classic sign of a dropped payload.
+  condition: kbx_spawned_process and kbx_target and proc.is_exe_upper_layer = true
+  output: >
+    Executable dropped after start ran in app container (container=%container.name
+    exe=%proc.exepath user=%user.name cmdline=%proc.cmdline)
+  priority: CRITICAL
+  tags: [kbx, drift, mitre_execution, T1204]
+
+- rule: KBX Unexpected Outbound Connection From App Container
+  desc: >
+    The app only answers requests. It should never open connections to the internet.
+  condition: >
+    evt.type = connect and evt.dir = < and evt.res = 0 and kbx_target
+    and fd.typechar = 4 and fd.sip != "127.0.0.1"
+  output: >
+    Outbound connection from app container (container=%container.name connection=%fd.name
+    user=%user.name proc=%proc.name cmdline=%proc.cmdline)
+  priority: NOTICE
+  tags: [kbx, mitre_command_and_control, T1071]

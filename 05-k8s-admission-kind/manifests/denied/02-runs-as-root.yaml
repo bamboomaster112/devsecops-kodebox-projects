@@ -1,0 +1,23 @@
+# Expect: DENIED by Pod Security Admission (restricted) - runs as root.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: runs-as-root
+  namespace: kbx-apps
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsUser: 0
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: app
+      image: kbx-registry:5000/kbx/sample-app:1.0.0
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+      resources:
+        limits:
+          cpu: 250m
+          memory: 128Mi

@@ -1,0 +1,22 @@
+# Expect: DENIED by Pod Security Admission (restricted) - privileged container.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged
+  namespace: kbx-apps
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: app
+      image: kbx-registry:5000/kbx/sample-app:1.0.0
+      securityContext:
+        privileged: true
+      resources:
+        limits:
+          cpu: 250m
+          memory: 128Mi

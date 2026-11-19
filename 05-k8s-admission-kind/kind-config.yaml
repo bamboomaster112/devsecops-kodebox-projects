@@ -1,0 +1,17 @@
+# Single-node kind cluster sized for a 2 vCPU / 4 GB KodeBox.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: kbx
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # NodePort 30080 of the sample app, reachable as http://127.0.0.1:30080 on the box only.
+      - containerPort: 30080
+        hostPort: 30080
+        listenAddress: "127.0.0.1"
+containerdConfigPatches:
+  # Read per-registry settings from /etc/containerd/certs.d (cluster-up.sh writes one
+  # for the local registry so the node pulls kbx-registry:5000 over plain HTTP).
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"

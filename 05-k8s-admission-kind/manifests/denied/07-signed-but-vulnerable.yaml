@@ -1,0 +1,24 @@
+# Expect: DENIED by Kyverno verify-image-signature (signed, but its vulnerability attestation lists CRITICAL findings).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vulnerable-image
+  namespace: kbx-apps
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: app
+      image: kbx-registry:5000/kbx/sample-app:0.9.0-legacy
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+      resources:
+        limits:
+          cpu: 250m
+          memory: 128Mi

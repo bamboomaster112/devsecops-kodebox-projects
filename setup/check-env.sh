@@ -7,7 +7,7 @@ ver() {  # ver <name> <command...>  -> prints the first version-looking string
   local name="$1"; shift
   local out
   if out="$("$@" 2>&1)"; then
-    printf '  %-16s %s\n' "$name" "$(grep -m1 -oE 'v?[0-9]+\.[0-9]+(\.[0-9]+)?' <<<"$out")"
+    printf '  %-16s %s\n' "$name" "$(grep -oE 'v?[0-9]+\.[0-9]+(\.[0-9]+)?' <<<"$out" | head -1)"
   else
     printf '  %-16s %s\n' "$name" "MISSING"
   fi

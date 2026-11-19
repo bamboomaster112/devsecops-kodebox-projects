@@ -1,0 +1,102 @@
+# The hardened sample app, deployed the way every admission policy expects.
+# deploy-app.sh replaces the image digest below with the digest that project 03 signed.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kbx-apps
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kbx-app
+  namespace: kbx-apps
+  labels:
+    app: kbx-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kbx-app
+  template:
+    metadata:
+      labels:
+        app: kbx-app
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: kbx-registry:5000/kbx/sample-app:1.0.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kbx-app
+  namespace: kbx-apps
+spec:
+  type: NodePort
+  selector:
+    app: kbx-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: 30080
+---
+# Only traffic to the app port is allowed in; the app never needs to call out.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kbx-app
+  namespace: kbx-apps
+spec:
+  podSelector:
+    matchLabels:
+      app: kbx-app
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - ports:
+        - port: 8000
+          protocol: TCP
+  egress: []

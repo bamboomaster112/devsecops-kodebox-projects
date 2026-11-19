@@ -1,0 +1,24 @@
+# Expect: DENIED by Kyverno verify-image-signature (pushed to the approved registry, never signed).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsigned-image
+  namespace: kbx-apps
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: app
+      image: kbx-registry:5000/kbx/unsigned-app:1.0.0
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+      resources:
+        limits:
+          cpu: 250m
+          memory: 128Mi
