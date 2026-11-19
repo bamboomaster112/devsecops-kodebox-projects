@@ -1,0 +1,6 @@
+# Python-based security tools used by the projects, pinned to the versions tested on the KodeBox.
+pre-commit==4.7.0
+semgrep==1.186.0
+checkov==3.4.6
+bandit==1.9.4
+git-filter-repo==2.47.0

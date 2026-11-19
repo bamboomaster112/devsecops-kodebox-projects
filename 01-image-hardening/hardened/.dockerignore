@@ -1,0 +1,5 @@
+# Send only what the image needs. Everything else stays out of the build context,
+# so secrets, git history and local junk can never end up in a layer.
+*
+!app.py
+!requirements.txt
