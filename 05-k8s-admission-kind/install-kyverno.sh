@@ -2,7 +2,7 @@
 # Install Kyverno, trimmed to fit a 2 vCPU / 4 GB box.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-KYVERNO_CHART_VERSION="${KYVERNO_CHART_VERSION:-__CHART__}"   # Kyverno __APP__
+KYVERNO_CHART_VERSION="${KYVERNO_CHART_VERSION:-3.10.0}"   # Kyverno v1.20.0
 
 helm repo add kyverno https://kyverno.github.io/kyverno/ --force-update >/dev/null
 # - one admission controller replica, no background or cleanup controllers (not used here)
